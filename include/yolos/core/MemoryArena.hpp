@@ -7,7 +7,7 @@ namespace yolos::core {
 
 class MemoryArena {
 private:
-    std::vector<uint8_t> buffer_;   // ← Must specify uint8_t (raw memory)
+    std::vector<uint8_t> buffer_;   // Raw byte buffer
     size_t offset_ = 0;
 
 public:
@@ -16,7 +16,7 @@ public:
     }
 
     void* allocate(size_t size, size_t alignment = 64) {
-        if (size == 0) return nullptr;        // Safety
+        if (size == 0) return nullptr;
 
         size_t aligned_offset = (offset_ + alignment - 1) & ~(alignment - 1);
 
@@ -35,7 +35,14 @@ public:
     }
 
     size_t used() const { return offset_; }
-    size_t capacity() const { return buffer_.size(); }   // Useful helper
+    size_t capacity() const { return buffer_.size(); }
+
+    // Helper for checking before allocation
+    bool canAllocate(size_t size) const {
+        if (size == 0) return true;
+        size_t aligned = (offset_ + 63) & ~63;   // 64-byte alignment
+        return aligned + size <= buffer_.size();
+    }
 };
 
 } // namespace yolos::core
