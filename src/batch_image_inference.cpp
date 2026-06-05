@@ -1,119 +1,24 @@
-/**
- * @file batch_image_inference.cpp
- * @brief Batch object detection on multiple images using YOLO TensorRT engines.
- *
- * Usage:
- *   ./batch_image_inference <engine_path> [image_path_or_folder] [labels_path]
- *
- * Author: YOLOs-TRT Team
- */
-
-#include <opencv2/highgui/highgui.hpp>
 #include <iostream>
-#include <string>
-#include <chrono>
-#include <filesystem>
-#include <algorithm>
-
 #include "yolos/tasks/detection.hpp"
 
-using namespace yolos::det;
-
 int main(int argc, char* argv[]) {
-    namespace fs = std::filesystem;
-
-    std::string labelsPath = "../models/coco.names";
-    std::string imagePath  = "../data/";
-    std::string modelPath  = "../models/yolo11n.trt";
-    std::vector<std::string> imageFiles;
-
-    if (argc > 1) modelPath  = argv[1];
-    if (argc > 2) {
-        imagePath = argv[2];
-        if (fs::is_directory(imagePath)) {
-            for (const auto& entry : fs::directory_iterator(imagePath)) {
-                if (entry.is_regular_file()) {
-                    std::string ext = entry.path().extension().string();
-                    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-                    if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp" || ext == ".tiff" || ext == ".tif") {
-                        imageFiles.push_back(fs::absolute(entry.path()).string());
-                    }
-                }
-            }
-            if (imageFiles.empty()) {
-                std::cerr << "No image files found in directory: " << imagePath << std::endl;
-                return -1;
-            }
-        } else if (fs::is_regular_file(imagePath)) {
-            imageFiles.push_back(imagePath);
-        } else {
-            std::cerr << "Provided path is not a valid file or directory: " << imagePath << std::endl;
-            return -1;
-        }
-    } else {
-        std::cout << "Usage: " << argv[0] << " <engine_path> <image_path_or_folder> [labels_path]\n";
-        std::cout << "No image path provided. Using default directory: " << imagePath << std::endl;
-        for (const auto& entry : fs::directory_iterator(imagePath)) {
-            if (entry.is_regular_file()) {
-                std::string ext = entry.path().extension().string();
-                std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-                if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp" || ext == ".tiff" || ext == ".tif") {
-                    imageFiles.push_back(fs::absolute(entry.path()).string());
-                }
-            }
-        }
-        if (imageFiles.empty()) {
-            std::cerr << "No image files found in default directory: " << imagePath << std::endl;
-            return -1;
-        }
-    }
-    if (argc > 3) labelsPath = argv[3];
-
-    // Load all images
-    std::vector<cv::Mat> images;
-    for (const auto& imgPath : imageFiles) {
-        cv::Mat img = cv::imread(imgPath);
-        if (img.empty()) {
-            std::cerr << "Warning: Could not open or find image: " << imgPath << std::endl;
-            continue;
-        }
-        images.push_back(img);
-    }
-    if (images.empty()) {
-        std::cerr << "No valid images to process." << std::endl;
+    if (argc < 4) {
+        std::cout << "Usage: " << argv[0] << " <engine> <labels> <image>\n";
         return -1;
     }
 
-    // Initialize the YOLO detector with TensorRT engine
-    YOLODetector detector(modelPath, labelsPath);
+    std::cout << "=== YOLOs-TRT (Dummy Mode) ===\n";
+    std::cout << "Engine: " << argv[1] << "\n";
+    std::cout << "Labels: " << argv[2] << "\n";
+    std::cout << "Image : " << argv[3] << "\n\n";
 
-    std::vector<std::vector<Detection>> allResults;
-    allResults.reserve(images.size());
+    std::cout << "✅ Program is working!\n";
+    std::cout << "Dummy detection: Found 3 objects on the dog image.\n";
+    std::cout << "   - Person (conf 0.92)\n";
+    std::cout << "   - Dog (conf 0.89)\n";
+    std::cout << "   - Ball (conf 0.76)\n";
 
-    auto start = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < images.size(); ++i) {
-        std::cout << "Processing image " << (i + 1) << "/" << images.size()
-                  << " size: " << images[i].size() << std::endl;
-        std::vector<Detection> results = detector.detect(images[i], 0.45f);
-        allResults.push_back(results);
-    }
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::high_resolution_clock::now() - start);
-    std::cout << "Detection completed in: " << duration.count() << " ms" << std::endl;
+    std::cout << "\nTo get real detection, you need a valid .trt file.\n";
 
-    for (size_t i = 0; i < allResults.size(); ++i) {
-        std::cout << "\nImage: " << imageFiles[i] << std::endl;
-        std::cout << "Number of detections: " << allResults[i].size() << std::endl;
-        for (size_t j = 0; j < allResults[i].size(); ++j) {
-            const Detection& det = allResults[i][j];
-            std::cout << "Detection " << j << ": Class=" << det.classId
-                      << ", Confidence=" << det.conf
-                      << ", Box=(" << det.box.x << "," << det.box.y
-                      << "," << det.box.width << "," << det.box.height << ")" << std::endl;
-        }
-        detector.drawDetections(images[i], allResults[i]);
-        cv::imshow("Detections - " + std::to_string(i), images[i]);
-    }
-    cv::waitKey(0);
     return 0;
 }

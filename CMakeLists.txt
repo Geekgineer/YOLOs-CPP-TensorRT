@@ -48,10 +48,8 @@ message(STATUS "CUDA Toolkit: ${CUDAToolkit_VERSION}")
 # Set SM architectures
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     if(IS_JETSON)
-        # Jetson Orin = sm_87, Xavier = sm_72
         set(CMAKE_CUDA_ARCHITECTURES "72;87")
     else()
-        # Data-center / desktop: Ampere (80,86), Ada (89), Hopper (90)
         set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90")
     endif()
 endif()
@@ -61,13 +59,12 @@ message(STATUS "CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 # TensorRT
 # ============================================================================
 if(NOT DEFINED TENSORRT_DIR)
-    # Try common TensorRT locations
     set(TENSORRT_SEARCH_PATHS
-        "/usr/lib/x86_64-linux-gnu"          # Ubuntu x86 system install
-        "/usr/lib/aarch64-linux-gnu"          # Jetson / aarch64 system
-        "/usr/local/tensorrt"                 # Manual install
-        "$ENV{TENSORRT_DIR}"                  # Environment variable
-        "${CMAKE_SOURCE_DIR}/TensorRT"        # Local copy
+        "/usr/lib/x86_64-linux-gnu"
+        "/usr/lib/aarch64-linux-gnu"
+        "/usr/local/tensorrt"
+        "$ENV{TENSORRT_DIR}"
+        "${CMAKE_SOURCE_DIR}/TensorRT"
     )
     foreach(path ${TENSORRT_SEARCH_PATHS})
         if(EXISTS "${path}/libnvinfer.so" OR EXISTS "${path}/lib/libnvinfer.so")
@@ -77,12 +74,10 @@ if(NOT DEFINED TENSORRT_DIR)
     endforeach()
 endif()
 
-# Find TensorRT headers
 find_path(TENSORRT_INCLUDE_DIR NvInfer.h
     HINTS ${TENSORRT_DIR}/include /usr/include/x86_64-linux-gnu /usr/include/aarch64-linux-gnu /usr/include
 )
 
-# Find TensorRT libraries
 find_library(NVINFER_LIB nvinfer
     HINTS ${TENSORRT_DIR}/lib ${TENSORRT_DIR} /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu
 )
@@ -91,13 +86,7 @@ find_library(NVONNXPARSER_LIB nvonnxparser
 )
 
 if(NOT NVINFER_LIB)
-    message(FATAL_ERROR
-        "TensorRT not found!\n"
-        "Please install TensorRT or set TENSORRT_DIR:\n"
-        "  cmake .. -DTENSORRT_DIR=/path/to/tensorrt\n"
-        "For Jetson, TensorRT is typically pre-installed via JetPack.\n"
-        "For data-center GPUs, download from: https://developer.nvidia.com/tensorrt"
-    )
+    message(FATAL_ERROR "TensorRT not found! Set -DTENSORRT_DIR=/path/to/TensorRT")
 endif()
 
 message(STATUS "TensorRT include: ${TENSORRT_INCLUDE_DIR}")
@@ -128,14 +117,12 @@ if(ENABLE_WARNINGS)
     endif()
 endif()
 
-# Release optimizations
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     if(NOT MSVC)
         add_compile_options(-O3)
     endif()
 endif()
 
-# Threading support
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
@@ -149,19 +136,26 @@ target_include_directories(cuda_preprocessing PRIVATE
     "${CMAKE_SOURCE_DIR}/include"
     "${TENSORRT_INCLUDE_DIR}"
 )
-target_link_libraries(cuda_preprocessing PRIVATE
-    CUDA::cudart
-)
+target_link_libraries(cuda_preprocessing PRIVATE CUDA::cudart)
 set_target_properties(cuda_preprocessing PROPERTIES
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON
 )
 
 # ============================================================================
+# Common Sources (This is the important fix)
+# ============================================================================
+set(COMMON_SOURCES
+    src/core/trt_session_base.cpp
+    src/tasks/detection.cpp
+    src/tasks/classification.cpp
+)
+
+# ============================================================================
 # Helper Function
 # ============================================================================
 function(add_yolo_executable name source)
-    add_executable(${name} ${source})
+    add_executable(${name} ${source} ${COMMON_SOURCES})
     target_include_directories(${name} PRIVATE
         "${TENSORRT_INCLUDE_DIR}"
     )
@@ -172,7 +166,6 @@ function(add_yolo_executable name source)
         cuda_preprocessing
         Threads::Threads
     )
-    # Optional: link nvonnxparser if available
     if(NVONNXPARSER_LIB)
         target_link_libraries(${name} PRIVATE ${NVONNXPARSER_LIB})
     endif()
@@ -214,5 +207,4 @@ message(STATUS "  CUDA Architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 message(STATUS "  TensorRT:          ${NVINFER_LIB}")
 message(STATUS "  OpenCV:            ${OpenCV_VERSION}")
 message(STATUS "  Jetson:            ${IS_JETSON}")
-message(STATUS "  Examples:          ${BUILD_EXAMPLES}")
 message(STATUS "")
