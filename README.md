@@ -1,57 +1,48 @@
 # YOLOs-CPP-TensorRT
 
-**High-Performance YOLO Object Detection in C++ with TensorRT**
+**High-Performance YOLO Inference Engine in C++ using TensorRT**
 
-A fast, production-ready inference engine for YOLO models (v8, v10, v11) using NVIDIA TensorRT, CUDA preprocessing, and OpenCV.
+A fast, optimized, and maintainable implementation for running YOLO (v8/v10/v11) models with NVIDIA TensorRT.
 
 ---
 
-## 🚀 Features
+### Features
 
 - TensorRT 8.6 acceleration for maximum speed
-- Custom CUDA kernel for image preprocessing (letterbox + normalization)
-- Clean C++17 architecture with proper class inheritance
-- Support for batch image inference
-- Easy to extend for custom YOLO models
+- Custom CUDA preprocessing (letterbox + normalization)
+- Clean C++17 architecture with proper class design
+- Batch image inference support
+- Easy to extend and modify
 - Successfully builds and runs on WSL2
 
-## 🛠️ Tech Stack
+### Tech Stack
 
-- **Language**: C++17 + CUDA
-- **Inference Engine**: TensorRT 8.6
-- **Computer Vision**: OpenCV 4
-- **Build System**: CMake
-- **Preprocessing**: Custom CUDA kernels
+- **C++17** + **CUDA**
+- **TensorRT 8.6**
+- **OpenCV 4**
+- **CMake** build system
 
-## 📁 Project Structure
-├── src/core/trt_session_base.cpp     → Core TensorRT engine management
-├── src/tasks/detection.cpp           → YOLO object detection logic
+### Project Structure
+├── src/core/trt_session_base.cpp     → Core TensorRT engine & context management
+├── src/tasks/detection.cpp           → YOLO object detection logic + post-processing
 ├── src/tasks/classification.cpp      → Image classification logic
-├── include/yolos/                    → Header files
+├── include/yolos/                    → All header files
 ├── CMakeLists.txt                    → Build configuration
-└── batch_image_inference             → Main executable
-text## How to Build
+└── batch_image_inference             → Main executable for batch inference
+text### How to Build
 
 ```bash
-mkdir -p build && cd build
-cmake .. -DTENSORRT_DIR=/path/to/your/TensorRT-8.6.1.6
+cd build
+cmake .. -DTENSORRT_DIR=/path/to/TensorRT-8.6.1.6
 make -j4
 How to Run
-Bash# Batch inference on single image
-./batch_image_inference ../models/yolo11n.trt ../models/coco.names ../data/dog.jpg
+Bash./batch_image_inference ../models/yolo11n.trt ../models/coco.names ../data/dog.jpg
 Current Status
 
-✅ Successfully compiles and runs
+✅ Project builds successfully
 ✅ Core TensorRT session and detector implemented
-⚠️ Real inference is in placeholder mode (needs valid .trt model)
-Fixed multiple linker, CMake, and missing file issues from original repo
-
-Future Improvements
-
-Full real-time camera inference
-INT8/FP16 quantization
-ONNX → TensorRT conversion pipeline
-Multi-GPU support
+⚠️ Real inference is currently in placeholder mode (needs valid .trt model)
+Fixed multiple missing files, CMake issues, and linker errors from the original fork
 
 
-Made with ❤️ for high-performance Computer Vision
+Made with ❤️ for learning high-performance Computer Vision
