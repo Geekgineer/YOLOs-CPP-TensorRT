@@ -1,8 +1,8 @@
 # YOLOs-CPP-TensorRT
 
-**High-Performance YOLO Inference Engine in C++ using TensorRT**
+**High-Performance YOLO Inference Engine in C++ with TensorRT**
 
-A fast, optimized, and maintainable implementation for running YOLO (v8/v10/v11) models with NVIDIA TensorRT.
+A fast, clean, and maintainable implementation for running modern YOLO models (YOLOv8, YOLOv10, YOLOv11) using NVIDIA TensorRT.
 
 ---
 
@@ -10,26 +10,31 @@ A fast, optimized, and maintainable implementation for running YOLO (v8/v10/v11)
 
 - TensorRT 8.6 acceleration for maximum speed
 - Custom CUDA preprocessing (letterbox + normalization)
-- Clean C++17 architecture with proper class design
+- Clean C++17 modular architecture
 - Batch image inference support
-- Easy to extend and modify
+- Easy to extend for custom models
 - Successfully builds and runs on WSL2
 
 ### Tech Stack
 
-- **C++17** + **CUDA**
-- **TensorRT 8.6**
-- **OpenCV 4**
-- **CMake** build system
+- C++17 + CUDA
+- TensorRT 8.6
+- OpenCV 4
+- CMake
 
 ### Project Structure
-├── src/core/trt_session_base.cpp     → Core TensorRT engine & context management
-├── src/tasks/detection.cpp           → YOLO object detection logic + post-processing
-├── src/tasks/classification.cpp      → Image classification logic
-├── include/yolos/                    → All header files
-├── CMakeLists.txt                    → Build configuration
-└── batch_image_inference             → Main executable for batch inference
-text### How to Build
+
+| Directory/File                    | Purpose |
+|----------------------------------|--------|
+| `src/core/trt_session_base.cpp`  | Core TensorRT engine loading & context management |
+| `src/tasks/detection.cpp`        | YOLO object detection logic + post-processing |
+| `src/tasks/classification.cpp`   | Image classification logic |
+| `src/batch_image_inference.cpp`  | Main executable for batch inference |
+| `include/yolos/`                 | All header files |
+| `CMakeLists.txt`                 | Build configuration |
+| `models/`                        | Place your `.trt` models and `coco.names` here |
+
+### How to Build
 
 ```bash
 cd build
@@ -39,10 +44,9 @@ How to Run
 Bash./batch_image_inference ../models/yolo11n.trt ../models/coco.names ../data/dog.jpg
 Current Status
 
-✅ Project builds successfully
-✅ Core TensorRT session and detector implemented
-⚠️ Real inference is currently in placeholder mode (needs valid .trt model)
-Fixed multiple missing files, CMake issues, and linker errors from the original fork
+✅ Compiles and runs successfully on WSL2
+✅ Fixed missing source files, CMake issues, and linker errors
+⚠️ Real inference is currently in placeholder mode (add a valid .trt model to enable full detection)
 
 
 Made with ❤️ for learning high-performance Computer Vision
