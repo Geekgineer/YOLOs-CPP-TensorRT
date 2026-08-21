@@ -16,7 +16,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 
 - NVIDIA GPU with Compute Capability >= 7.5
 - CUDA Toolkit >= 12.0
-- TensorRT >= 10.0
+- TensorRT 10.x (not 11.x — the TRT 10 tensor API is required)
 - OpenCV >= 4.5
 - CMake >= 3.18
 - C++17 compiler (GCC 9+)

@@ -86,7 +86,7 @@ cd YOLOs-CPP-TensorRT && ./build.sh
 # 2. Convert a model (requires Python + ultralytics)
 pip install -r requirements.txt
 python models/export_onnx.py --model yolo11n
-trtexec --onnx=models/yolo11n.onnx --saveEngine=models/yolo11n.trt --fp16
+./build/onnx2trt models/yolo11n.onnx models/yolo11n.trt --fp16
 
 # 3. Run inference
 ./build/image_inference models/yolo11n.trt data/dog.jpg models/coco.names
@@ -136,7 +136,7 @@ YOLOs-TRT auto-detects the YOLO version from output tensor shapes — **no manua
 |:-----------|:-------:|:------|
 | NVIDIA GPU | CC ≥ 7.5 | Turing, Ampere, Ada, Hopper, or Jetson Xavier/Orin |
 | CUDA Toolkit | ≥ 12.0 | |
-| TensorRT | ≥ 10.0 | Tensor-based API (`enqueueV3`) |
+| TensorRT | 10.x | Tensor-based API (`enqueueV3`). **Not** 11.x — see [installation](doc/installation.md) |
 | OpenCV | ≥ 4.5 | Image I/O and visualization |
 | CMake | ≥ 3.18 | CUDA language support |
 | C++ compiler | C++17 | GCC 9+ / Clang 10+ |
@@ -149,6 +149,14 @@ cd YOLOs-CPP-TensorRT
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
+```
+
+Builds for `75;80;86;89;90` by default (`72;87` on Jetson). CUDA architectures
+are **not** auto-detected — narrowing to your own GPU makes compilation much
+faster:
+
+```bash
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES="89"
 ```
 
 <details>
@@ -210,9 +218,14 @@ pip install uv && uv pip install -r requirements.txt
 # Export ONNX from Ultralytics
 python models/export_onnx.py --model yolo11n
 
-# Convert to TensorRT engine
-trtexec --onnx=models/yolo11n.onnx --saveEngine=models/yolo11n.trt --fp16
+# Convert to TensorRT engine using the bundled tool
+./build/onnx2trt models/yolo11n.onnx models/yolo11n.trt --fp16
 ```
+
+> `trtexec` also works, but it is **not** shipped by the `libnvinfer-dev` /
+> `tensorrt-dev` apt packages — only by the samples package or the tarball.
+> `onnx2trt` is built from this repo and links the TensorRT libraries the
+> project already requires, so it is always available.
 
 <details>
 <summary><b>INT8 quantization with calibration</b></summary>
@@ -432,8 +445,10 @@ YOLOs-CPP-TensorRT/
 │   ├── video_inference.cpp   #   Video file (multi-threaded)
 │   ├── camera_inference.cpp  #   Live camera feed
 │   ├── batch_image_inference.cpp
-│   └── class_image_inference.cpp
-├── examples/                 # Per-task examples (image / video / camera × 5 tasks)
+│   ├── class_image_inference.cpp
+│   └── depth_image_inference.cpp #   Monocular metric depth
+├── tools/                    # onnx2trt — dependency-free engine builder
+├── examples/                 # Per-task examples (image / video / camera)
 ├── benchmarks/               # Unified benchmark tool (FPS, latency, mAP)
 ├── tests/                    # Per-task validation suites (C++ vs Python ground truth)
 ├── models/                   # ONNX export script + label files
@@ -536,7 +551,7 @@ This is expected for **dynamic-shape** models. YOLOs-TRT automatically falls bac
 TensorRT engines are **GPU-specific** and **TRT-version-specific**. Rebuild on the target device:
 
 ```bash
-trtexec --onnx=model.onnx --saveEngine=model.trt --fp16
+./build/onnx2trt model.onnx model.trt --fp16
 ```
 
 </details>

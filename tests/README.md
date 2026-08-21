@@ -99,7 +99,8 @@ additional numerical differences compared to PyTorch FP32):
 The test scripts are designed for CI/CD pipelines:
 
 - Uses `uv` for fast, reproducible Python environment
-- Auto-converts ONNX models to TensorRT engines via `trtexec` or Python converter
+- Auto-converts ONNX models to TensorRT engines, preferring the bundled
+  `onnx2trt` tool, then `trtexec`, then the Python converter
 - Builds against system-installed TensorRT and CUDA (no downloads needed)
 - Returns proper exit codes (0 = pass, non-zero = fail)
 
@@ -115,7 +116,8 @@ The test scripts are designed for CI/CD pipelines:
 
 1. **GPU required**: All tests require an NVIDIA GPU with TensorRT
 2. **Engine portability**: TRT engines are GPU-specific. Rebuild if switching hardware.
-3. **Model size**: Uses smaller input (320x320) for faster testing
+3. **Model size**: Uses smaller input (320x320) for faster testing; the
+   depth suite uses 768x768, the resolution its weights were trained at
 4. **YOLO26 models**: Feature end-to-end NMS-free architecture
 
 ## Troubleshooting
@@ -131,10 +133,31 @@ sudo apt install tensorrt
 ```
 
 **trtexec not found:**
+
+Expected on an apt-only install — `libnvinfer-dev` and `tensorrt-dev` do not
+ship `trtexec`. The harness falls back to the bundled `onnx2trt`, so just build
+the main project first:
+
 ```bash
-# trtexec is in /usr/src/tensorrt/bin/ on Ubuntu
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
+```
+
+If you do have the samples package or the tarball, `trtexec` lives here:
+
+```bash
 export PATH=$PATH:/usr/src/tensorrt/bin
 ```
+
+**Results differ from the Python ground truth:**
+
+Check the CUDA architecture the tests were built for:
+
+```bash
+grep CMAKE_CUDA_ARCHITECTURES tests/build/CMakeCache.txt
+```
+
+`52` means the CUDA preprocessing kernel was built for sm_52 and is returning
+incorrect pixel data on a modern GPU. Reconfigure from a clean build directory.
 
 **Python package issues:**
 ```bash

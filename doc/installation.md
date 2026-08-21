@@ -11,7 +11,7 @@ This guide covers system requirements, build options, and troubleshooting for YO
 | **OS** | Linux (Ubuntu 20.04+) |
 | **GPU** | NVIDIA GPU, Compute Capability >= 7.5 (Turing, Ampere, Ada, Hopper) |
 | **CUDA Toolkit** | >= 12.0 |
-| **TensorRT** | >= 10.0 |
+| **TensorRT** | 10.x (**not** 11.x — see note) |
 | **Compiler** | GCC 9+, Clang 10+ (C++17 support) |
 | **CMake** | >= 3.18 (CUDA language support) |
 | **OpenCV** | >= 4.5 |
@@ -172,8 +172,22 @@ trtexec --onnx=models/yolo11n.onnx --saveEngine=models/yolo11n.trt --fp16
 |----------------|---------|-------------|
 | `CMAKE_BUILD_TYPE` | Release | Build type (Debug/Release/RelWithDebInfo) |
 | `TENSORRT_DIR` | auto-detect | Path to custom TensorRT installation |
-| `CMAKE_CUDA_ARCHITECTURES` | auto-detect | Target GPU compute capabilities |
+| `CMAKE_CUDA_ARCHITECTURES` | `75;80;86;89;90` (Jetson: `72;87`) | Target GPU compute capabilities. **Not** auto-detected — see the note below. |
 | `BUILD_EXAMPLES` | OFF | Build task-specific examples in `examples/` |
+
+> **Pin TensorRT to 10.x.** `apt-get install libnvinfer-dev` now resolves to
+> TensorRT 11.x built against CUDA 13. This project targets the TensorRT 10
+> tensor API (`enqueueV3`, `setTensorAddress`), so 11.x will not build. To hold
+> the whole family back:
+>
+> ```bash
+> sudo tee /etc/apt/preferences.d/tensorrt-pin > /dev/null <<'PIN'
+> Package: libnvinfer* libnvonnxparsers* tensorrt*
+> Pin: version 10.*
+> Pin-Priority: 1001
+> PIN
+> sudo apt-get update
+> ```
 
 ## Docker
 
@@ -216,6 +230,24 @@ cmake .. -DTENSORRT_DIR=/opt/TensorRT-10.4
 sudo apt install libopencv-dev
 pkg-config --modversion opencv4
 ```
+
+### CUDA architectures are not auto-detected
+
+The build targets `75;80;86;89;90` by default (`72;87` on Jetson). Narrowing it
+to your own GPU cuts compile time substantially:
+
+```bash
+cmake .. -DCMAKE_CUDA_ARCHITECTURES="$(nvidia-smi --query-gpu=compute_cap \
+             --format=csv,noheader | head -1 | tr -d '.')"
+```
+
+> **Do not** let this end up as `52`. CMake's `project(... LANGUAGES CUDA)`
+> seeds `CMAKE_CUDA_ARCHITECTURES` from the nvcc default (sm_52) when nothing
+> else sets it. An sm_52 build of the CUDA preprocessing kernel still *runs* on
+> a modern GPU via PTX JIT, but returns incorrect pixel data — inference then
+> produces plausible-looking but wrong results, with no error anywhere. The
+> build now fails outright if the value is `52`; if you see that error, pass an
+> architecture explicitly rather than working around it.
 
 ### "CUDA architecture mismatch"
 

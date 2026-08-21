@@ -183,7 +183,34 @@ convert_onnx_to_trt() {
                 fi
             fi
 
-            # Fallback to Python converter. It does `import tensorrt`, which is
+            # Fallback 1: the in-repo onnx2trt tool. It links the same TensorRT
+            # libraries the project already needs, so it cannot suffer the
+            # version skew that a mismatched Python wheel would introduce.
+            local onnx2trt_bin=""
+            for candidate in \
+                "$models_dir/../../../build/onnx2trt" \
+                "$models_dir/../../build/onnx2trt" \
+                "$(command -v onnx2trt 2>/dev/null)"; do
+                if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+                    onnx2trt_bin="$candidate"
+                    break
+                fi
+            done
+
+            if [ -n "$onnx2trt_bin" ]; then
+                echo -e "${BLUE}Using in-repo onnx2trt: $onnx2trt_bin${NC}"
+                local o2t_args=("$onnx_file" "$trt_file")
+                [ "$precision" = "fp16" ] && o2t_args+=("--fp16")
+                [ "$precision" = "int8" ] && o2t_args+=("--int8")
+                if "$onnx2trt_bin" "${o2t_args[@]}"; then
+                    converted=$((converted + 1))
+                    echo -e "${GREEN}Converted: $trt_file${NC}"
+                    continue
+                fi
+                echo -e "${YELLOW}onnx2trt failed, trying the Python converter...${NC}"
+            fi
+
+            # Fallback 2: Python converter. It does `import tensorrt`, which is
             # NOT provided by the libnvinfer-dev / tensorrt-dev apt packages —
             # only the Python wheel ships it. Install it on demand, pinned to the
             # system TensorRT version: engines are version-locked, so a wheel of a
@@ -228,6 +255,7 @@ convert_onnx_to_trt() {
                 echo -e "${RED}  trtexec: not on PATH and not in /usr/src/tensorrt/bin${NC}"
                 echo -e "${RED}  (apt's libnvinfer-dev/tensorrt-dev do NOT ship trtexec;${NC}"
                 echo -e "${RED}   it comes with the samples package or the TensorRT tarball)${NC}"
+                echo -e "${RED}  onnx2trt: not built — configure the project first (cmake + make)${NC}"
                 echo -e "${RED}  python converter: trt-files/scripts/convert_to_tensorrt.py not found${NC}"
                 failed=$((failed + 1))
             fi

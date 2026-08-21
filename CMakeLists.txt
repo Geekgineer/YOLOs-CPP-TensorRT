@@ -214,6 +214,16 @@ add_yolo_executable(batch_image_inference src/batch_image_inference.cpp)
 add_yolo_executable(depth_image_inference src/depth_image_inference.cpp)
 
 # ============================================================================
+# Tools
+# ============================================================================
+# onnx2trt needs the ONNX parser; the inference binaries do not.
+if(NVONNXPARSER_LIB)
+    add_yolo_executable(onnx2trt tools/onnx2trt.cpp)
+else()
+    message(STATUS "nvonnxparser not found — skipping the onnx2trt tool")
+endif()
+
+# ============================================================================
 # Examples (optional)
 # ============================================================================
 if(BUILD_EXAMPLES)

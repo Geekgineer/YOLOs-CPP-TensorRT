@@ -64,7 +64,7 @@ Export these at `imgsz=768` (their training resolution).
 
 ```
 .pt (PyTorch)  -->  .onnx (ONNX)  -->  .trt (TensorRT Engine)
-   Ultralytics       export_onnx.py       convert_to_tensorrt.py / trtexec
+   Ultralytics       export_onnx.py       onnx2trt / convert_to_tensorrt.py
 ```
 
 ### Step 1: Export to ONNX
@@ -92,7 +92,22 @@ python models/export_onnx.py --model yolo11n
 
 ### Step 2: Convert to TensorRT
 
-**Option A: Using trtexec (recommended, no Python needed)**
+**Option A: Using the bundled `onnx2trt` (recommended — no extra dependencies)**
+
+```bash
+# Built alongside the inference binaries whenever the ONNX parser is present
+./build/onnx2trt models/yolo11n.onnx models/yolo11n.trt --fp16
+./build/onnx2trt models/yolo11n.onnx models/yolo11n_fp32.trt
+```
+
+It links the same TensorRT libraries the project already needs, so there is no
+version-skew risk. For calibrated INT8, use the Python converter below.
+
+**Option B: Using trtexec**
+
+> `trtexec` is **not** installed by the `libnvinfer-dev` or `tensorrt-dev` apt
+> packages — it ships with the samples package or the TensorRT tarball. If you
+> installed TensorRT from apt, you probably do not have it; use Option A.
 
 ```bash
 # FP16 (best throughput on Tensor Core GPUs)
@@ -106,7 +121,7 @@ trtexec --onnx=models/yolo11n.onnx --saveEngine=models/yolo11n_int8.trt --int8 \
 trtexec --onnx=models/yolo11n.onnx --saveEngine=models/yolo11n_fp32.trt
 ```
 
-**Option B: Using Python converter**
+**Option C: Using the Python converter**
 
 ```bash
 # FP16
