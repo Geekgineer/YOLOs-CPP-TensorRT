@@ -27,6 +27,7 @@ WORKDIR /build
 COPY CMakeLists.txt ./
 COPY include/ include/
 COPY src/ src/
+COPY tools/ tools/
 
 # Build (Jetson: sm_72 for Xavier, sm_87 for Orin)
 RUN mkdir -p build && cd build && \
@@ -53,6 +54,8 @@ COPY --from=builder /build/build/video_inference .
 COPY --from=builder /build/build/camera_inference .
 COPY --from=builder /build/build/class_image_inference .
 COPY --from=builder /build/build/batch_image_inference .
+COPY --from=builder /build/build/depth_image_inference .
+COPY --from=builder /build/build/onnx2trt .
 
 COPY models/*.names models/
 RUN mkdir -p data

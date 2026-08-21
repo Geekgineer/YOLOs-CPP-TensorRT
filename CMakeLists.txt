@@ -2,6 +2,26 @@
 # YOLOs-TRT - High-Performance YOLO Inference with TensorRT
 # ============================================================================
 cmake_minimum_required(VERSION 3.18)
+# ============================================================================
+# CUDA Architectures — MUST be chosen BEFORE project()
+# ============================================================================
+# project(... LANGUAGES CUDA) initializes CMAKE_CUDA_ARCHITECTURES from the
+# compiler default (sm_52 on CUDA 12.x) whenever it is not already set. That
+# made the `if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)` block further down dead
+# code, so any configure that did not pass -DCMAKE_CUDA_ARCHITECTURES silently
+# built the CUDA letterbox preprocessing kernel for sm_52. It still JITs on a
+# modern GPU, but returns WRONG pixel data — which silently corrupts the
+# results of every task. Deciding here, before project(), is what actually
+# takes effect.
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64" AND
+       (EXISTS "/etc/nv_tegra_release" OR EXISTS "/usr/lib/aarch64-linux-gnu/tegra"))
+        set(CMAKE_CUDA_ARCHITECTURES "72;87")          # Jetson Xavier / Orin
+    else()
+        set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90") # Turing -> Hopper
+    endif()
+endif()
+
 project(YOLOs-TRT VERSION 3.0.0 LANGUAGES CXX CUDA)
 
 # ============================================================================
@@ -45,15 +65,13 @@ endif()
 find_package(CUDAToolkit REQUIRED)
 message(STATUS "CUDA Toolkit: ${CUDAToolkit_VERSION}")
 
-# Set SM architectures
-if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    if(IS_JETSON)
-        # Jetson Orin = sm_87, Xavier = sm_72
-        set(CMAKE_CUDA_ARCHITECTURES "72;87")
-    else()
-        # Data-center / desktop: Ampere (80,86), Ada (89), Hopper (90)
-        set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90")
-    endif()
+# TensorRT 10 requires Turing (sm_75) or newer, so the nvcc default of sm_52
+# is never a legitimate target here — catch a regression of the above.
+if(CMAKE_CUDA_ARCHITECTURES STREQUAL "52")
+    message(FATAL_ERROR
+        "CMAKE_CUDA_ARCHITECTURES is 52 (the nvcc default). The CUDA "
+        "preprocessing kernel returns incorrect data when built for sm_52 and "
+        "run on a modern GPU. Pass -DCMAKE_CUDA_ARCHITECTURES=<arch> explicitly.")
 endif()
 message(STATUS "CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 
@@ -193,6 +211,17 @@ add_yolo_executable(video_inference src/video_inference.cpp)
 add_yolo_executable(camera_inference src/camera_inference.cpp)
 add_yolo_executable(class_image_inference src/class_image_inference.cpp)
 add_yolo_executable(batch_image_inference src/batch_image_inference.cpp)
+add_yolo_executable(depth_image_inference src/depth_image_inference.cpp)
+
+# ============================================================================
+# Tools
+# ============================================================================
+# onnx2trt needs the ONNX parser; the inference binaries do not.
+if(NVONNXPARSER_LIB)
+    add_yolo_executable(onnx2trt tools/onnx2trt.cpp)
+else()
+    message(STATUS "nvonnxparser not found — skipping the onnx2trt tool")
+endif()
 
 # ============================================================================
 # Examples (optional)

@@ -7,6 +7,10 @@ on:
     branches: ["main", "dev"]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: read
@@ -23,10 +27,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache apt packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             /var/cache/apt/archives
@@ -55,6 +59,17 @@ jobs:
           sudo apt-get update
 
           # Install ONLY minimal packages for compilation (no nsight/profiler bloat)
+          # TensorRT 10.x ONLY. This codebase targets the TRT 10 tensor API
+          # (enqueueV3 / setTensorAddress). Left unpinned, apt now resolves
+          # libnvinfer-dev to TensorRT 11.x built against CUDA 13, which both
+          # breaks that API and conflicts with the CUDA 12.x toolkit above.
+          sudo tee /etc/apt/preferences.d/tensorrt-pin > /dev/null <<'PIN'
+          Package: libnvinfer* libnvonnxparsers* tensorrt*
+          Pin: version 10.*
+          Pin-Priority: 1001
+          PIN
+          sudo apt-get update
+
           sudo apt-get install -y --no-install-recommends \
             cuda-nvcc-${CUDA_VERSION} \
             cuda-cudart-dev-${CUDA_VERSION} \
@@ -87,6 +102,7 @@ jobs:
           file build/batch_image_inference
           file build/class_image_inference
           file build/camera_inference
+          file build/depth_image_inference
 
   # ==========================================================================
   # Build Benchmark Tool
@@ -96,10 +112,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache apt packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             /var/cache/apt/archives
@@ -124,6 +140,17 @@ jobs:
           wget -q "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${UBUNTU_VER}/x86_64/cuda-keyring_1.1-1_all.deb"
           sudo dpkg -i cuda-keyring_1.1-1_all.deb
           rm cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+
+          # TensorRT 10.x ONLY. This codebase targets the TRT 10 tensor API
+          # (enqueueV3 / setTensorAddress). Left unpinned, apt now resolves
+          # libnvinfer-dev to TensorRT 11.x built against CUDA 13, which both
+          # breaks that API and conflicts with the CUDA 12.x toolkit above.
+          sudo tee /etc/apt/preferences.d/tensorrt-pin > /dev/null <<'PIN'
+          Package: libnvinfer* libnvonnxparsers* tensorrt*
+          Pin: version 10.*
+          Pin-Priority: 1001
+          PIN
           sudo apt-get update
 
           sudo apt-get install -y --no-install-recommends \
@@ -160,7 +187,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install clang-format
         run: |
@@ -224,13 +251,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build Dockerfile.tensorrt (no push)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile.tensorrt
@@ -247,6 +274,7 @@ jobs:
   gpu-tests:
     runs-on: [self-hosted, Linux, X64, gpu]
     needs: [build-gpu]
+    timeout-minutes: 45
 
     strategy:
       fail-fast: false
@@ -257,10 +285,11 @@ jobs:
           - { name: "segmentation",   script: "test_segmentation.sh" }
           - { name: "pose",           script: "test_pose.sh" }
           - { name: "obb",            script: "test_obb.sh" }
+          - { name: "depth",          script: "test_depth.sh" }
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           clean: false  # preserve cached models/engines between runs
 
@@ -294,7 +323,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gpu-test-results-${{ matrix.task.name }}
           path: tests/${{ matrix.task.name }}/results/

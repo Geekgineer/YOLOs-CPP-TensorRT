@@ -11,7 +11,7 @@ cd tests
 ./test_all.sh
 ```
 
-Expected output: All 36 tests should pass (100%).
+Expected output: All 44 tests should pass (100%).
 
 ### 2. Run Benchmarks
 

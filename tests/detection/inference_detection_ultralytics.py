@@ -21,7 +21,7 @@ def validate_paths(paths : dict) -> bool:
         print(f"Images path '{images_path}' does not exist.")
         return False
     
-    images_files = os.listdir(images_path)
+    images_files = sorted(os.listdir(images_path))
     if len(images_files) == 0:
         print(f"No images found in '{images_path}'.")
         return False
@@ -73,7 +73,7 @@ def run_inference(model_path: str, images_path: str, inference_config: dict) -> 
 
     returned_results = []
 
-    for image_file in tqdm(os.listdir(images_path), desc="Images to process", unit="image"):
+    for image_file in tqdm(sorted(os.listdir(images_path)), desc="Images to process", unit="image"):
             
         _, file_ext = os.path.splitext(image_file)
 

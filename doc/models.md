@@ -45,11 +45,26 @@ Supported models, ONNX export, TensorRT conversion, and optimization for YOLOs-T
 | YOLOv11n-cls | 1.6M | 70.0% |
 | YOLO26n-cls | 1.5M | 71.2% |
 
+### Metric Depth
+
+Monocular depth models predicting per-pixel distance in meters. Trained on a
+~2.19M image indoor/outdoor mix; delta-1 accuracy is on NYU Depth V2.
+
+| Model | Params | delta-1 Acc |
+|-------|-------:|------------:|
+| YOLO26n-depth | 2.4M | 0.882 |
+| YOLO26s-depth | - | - |
+| YOLO26m-depth | - | - |
+| YOLO26l-depth | - | - |
+| YOLO26x-depth | - | 0.933 |
+
+Export these at `imgsz=768` (their training resolution).
+
 ## Model Pipeline: PyTorch -> ONNX -> TensorRT
 
 ```
 .pt (PyTorch)  -->  .onnx (ONNX)  -->  .trt (TensorRT Engine)
-   Ultralytics       export_onnx.py       convert_to_tensorrt.py / trtexec
+   Ultralytics       export_onnx.py       onnx2trt / convert_to_tensorrt.py
 ```
 
 ### Step 1: Export to ONNX
@@ -77,7 +92,22 @@ python models/export_onnx.py --model yolo11n
 
 ### Step 2: Convert to TensorRT
 
-**Option A: Using trtexec (recommended, no Python needed)**
+**Option A: Using the bundled `onnx2trt` (recommended — no extra dependencies)**
+
+```bash
+# Built alongside the inference binaries whenever the ONNX parser is present
+./build/onnx2trt models/yolo11n.onnx models/yolo11n.trt --fp16
+./build/onnx2trt models/yolo11n.onnx models/yolo11n_fp32.trt
+```
+
+It links the same TensorRT libraries the project already needs, so there is no
+version-skew risk. For calibrated INT8, use the Python converter below.
+
+**Option B: Using trtexec**
+
+> `trtexec` is **not** installed by the `libnvinfer-dev` or `tensorrt-dev` apt
+> packages — it ships with the samples package or the TensorRT tarball. If you
+> installed TensorRT from apt, you probably do not have it; use Option A.
 
 ```bash
 # FP16 (best throughput on Tensor Core GPUs)
@@ -91,7 +121,7 @@ trtexec --onnx=models/yolo11n.onnx --saveEngine=models/yolo11n_int8.trt --int8 \
 trtexec --onnx=models/yolo11n.onnx --saveEngine=models/yolo11n_fp32.trt
 ```
 
-**Option B: Using Python converter**
+**Option C: Using the Python converter**
 
 ```bash
 # FP16
@@ -137,6 +167,7 @@ python trt-files/scripts/convert_to_tensorrt.py --convert-all --models-dir model
 | `coco.names` | 80 | General detection/segmentation/pose |
 | `Dota.names` | 15 | Aerial/satellite OBB |
 | `ImageNet.names` | 1000 | Classification |
+| _(none)_ | - | Depth — predicts meters, not classes |
 
 ## Model Paths in C++
 
@@ -152,6 +183,9 @@ YOLOPoseDetector pose("models/yolo11n-pose.trt", "");
 
 // OBB
 YOLOOBBDetector obb("models/yolo11n-obb.trt", "models/Dota.names");
+
+// Metric depth (no labels file)
+YOLODepthEstimator depth("models/yolo26n-depth.trt");
 
 // Classification
 YOLOClassifier cls("models/yolo11n-cls.trt", "models/ImageNet.names");

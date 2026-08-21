@@ -10,6 +10,7 @@
 #include <chrono>
 #include <filesystem>
 #include <algorithm>
+#include <map>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
 
@@ -39,7 +40,7 @@ struct SingleInferenceResult {
 struct Results {
     std::string weightsPath;
     std::string task;
-    std::unordered_map<std::string, std::vector<SingleInferenceResult>> inferenceResults;
+    std::map<std::string, std::vector<SingleInferenceResult>> inferenceResults;
 };
 
 bool validatePaths(const std::unordered_map<std::string, std::string>& paths) {
@@ -95,6 +96,8 @@ bool loadImages(const std::string& imagesPath, std::vector<std::string>& imageFi
         std::cerr << "Error: No valid image files found in: " << imagesPath << std::endl;
         return false;
     }
+    // Deterministic order so results_cpp.json is stable and diffable
+    std::sort(imageFiles.begin(), imageFiles.end());
     std::cout << "Found " << imageFiles.size() << " image(s)" << std::endl;
     return true;
 }
@@ -102,7 +105,7 @@ bool loadImages(const std::string& imagesPath, std::vector<std::string>& imageFi
 void runInference(const std::string& modelPath, const std::string& labelsPath, 
                   const std::vector<std::string>& imageFiles, 
                   const std::unordered_map<std::string, std::string>& inferenceConfig, 
-                  std::unordered_map<std::string, std::vector<SingleInferenceResult>>& inferenceResults) {
+                  std::map<std::string, std::vector<SingleInferenceResult>>& inferenceResults) {
     
     std::cout << "Model: " << modelPath << std::endl;
     std::cout << "Labels: " << labelsPath << std::endl;
@@ -160,7 +163,7 @@ void runInference(const std::string& modelPath, const std::string& labelsPath,
     }
 }
 
-void toJson(const std::unordered_map<std::string, Results>& results, 
+void toJson(const std::map<std::string, Results>& results, 
             const std::string& basePath, json& outputJson) {
     for (const auto& [modelName, result] : results) {
         outputJson[modelName] = json();
@@ -239,7 +242,7 @@ int main(int argc, char* argv[]) {
         fs::remove(resultsFilePath);
     }
 
-    std::unordered_map<std::string, Results> allResults;
+    std::map<std::string, Results> allResults;
 
     for (const auto& model : models) {
         std::string modelPath = weightsPath + model + ".trt";

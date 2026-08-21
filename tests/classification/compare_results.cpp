@@ -22,6 +22,16 @@ json read_json(const std::string& path) {
     return j;
 }
 
+// Locate the C++ result entry for a given image path. The C++ driver stores
+// per-image results in an unordered container, so positional indices are NOT
+// comparable between the two JSON files — always match on image_path.
+static const json* findByImagePath(const json& cpp_results, const std::string& image_path) {
+    for (const auto& entry : cpp_results) {
+        if (entry.value("image_path", "") == image_path) return &entry;
+    }
+    return nullptr;
+}
+
 class ResultsFixtureCls : public ::testing::Test {
 protected:
     json results_ultralytics;
@@ -74,9 +84,8 @@ TEST_F(ResultsFixtureCls, CompareImagesPaths) {
         auto& cpp_results = results_cpp[model_name]["results"];
         for (size_t i = 0; i < ultra_results.size(); ++i) {
             std::string path_ultra = ultra_results[i].value("image_path", "");
-            std::string path_cpp = cpp_results[i].value("image_path", "");
-            ASSERT_EQ(path_ultra, path_cpp)
-                << "Image path mismatch for model " << model_name << ", image " << i;
+            ASSERT_NE(findByImagePath(cpp_results, path_ultra), nullptr)
+                << "Image " << path_ultra << " is missing from results_cpp for model " << model_name;
         }
     }
 }
@@ -89,9 +98,13 @@ TEST_F(ResultsFixtureCls, CompareTop1Classification) {
 
         for (size_t i = 0; i < ultra_results.size(); ++i) {
             auto ultra_infs = ultra_results[i].value("inference_results", json::array());
-            auto cpp_infs = cpp_results[i].value("inference_results", json::array());
 
             std::string image_path = ultra_results[i].value("image_path", "");
+
+            const json* cpp_entry = findByImagePath(cpp_results, image_path);
+            ASSERT_NE(cpp_entry, nullptr)
+                << "Image " << image_path << " is missing from results_cpp for model " << model_name;
+            auto cpp_infs = cpp_entry->value("inference_results", json::array());
 
             ASSERT_FALSE(ultra_infs.empty()) << "Ultralytics inference empty for model " << model_name << ", image: " << image_path;
             ASSERT_FALSE(cpp_infs.empty()) << "CPP inference empty for model " << model_name << ", image: " << image_path;

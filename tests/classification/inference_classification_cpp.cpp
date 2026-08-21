@@ -9,6 +9,7 @@
 #include <chrono>
 #include <filesystem>
 #include <algorithm>
+#include <map>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
 
@@ -31,7 +32,7 @@ struct SingleInferenceResultCls {
 struct ResultsCls {
     std::string weightsPath;
     std::string task;
-    std::unordered_map<std::string, std::vector<SingleInferenceResultCls>> inferenceResults;
+    std::map<std::string, std::vector<SingleInferenceResultCls>> inferenceResults;
 };
 
 bool validatePaths(const std::unordered_map<std::string, std::string>& paths) {
@@ -60,6 +61,8 @@ bool loadImages(const std::string& imagesPath, std::vector<std::string>& imageFi
             }
         }
     }
+    // Deterministic order so results_cpp.json is stable and diffable
+    std::sort(imageFiles.begin(), imageFiles.end());
     return !imageFiles.empty();
 }
 
@@ -70,11 +73,12 @@ void findModels(const std::string& modelsDir, std::vector<std::string>& modelFil
             modelFiles.push_back(entry.path().string());
         }
     }
+    std::sort(modelFiles.begin(), modelFiles.end());
 }
 
 void runInference(const std::string& modelPath, const std::string& labelsPath,
                   const std::vector<std::string>& imageFiles,
-                  std::unordered_map<std::string, std::vector<SingleInferenceResultCls>>& inferenceResults) {
+                  std::map<std::string, std::vector<SingleInferenceResultCls>>& inferenceResults) {
     
     std::cout << "Model: " << modelPath << std::endl;
     std::cout << "Labels: " << labelsPath << std::endl;
@@ -107,7 +111,7 @@ void runInference(const std::string& modelPath, const std::string& labelsPath,
     }
 }
 
-void toJson(const std::unordered_map<std::string, ResultsCls>& results,
+void toJson(const std::map<std::string, ResultsCls>& results,
             const std::string& basePath, json& outputJson) {
     for (const auto& [modelName, result] : results) {
         outputJson[modelName] = json();
@@ -161,7 +165,7 @@ int main(int argc, char* argv[]) {
     std::string resultsFilePath = resultsPath + "results_cpp.json";
     if (fs::exists(resultsFilePath)) fs::remove(resultsFilePath);
 
-    std::unordered_map<std::string, ResultsCls> allResults;
+    std::map<std::string, ResultsCls> allResults;
 
     for (const auto& modelPath : modelFiles) {
         std::string modelName = fs::path(modelPath).stem().string();

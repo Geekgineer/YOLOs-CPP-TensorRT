@@ -2,6 +2,21 @@
 # YOLOs-TRT Test Suite
 # ============================================================================
 cmake_minimum_required(VERSION 3.18)
+# ============================================================================
+# CUDA Architectures — MUST be chosen BEFORE project()
+# ============================================================================
+# project(... LANGUAGES CUDA) initializes CMAKE_CUDA_ARCHITECTURES from the
+# compiler default (sm_52 on CUDA 12.x) whenever it is not already set. That
+# made the `if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)` block further down dead
+# code, so any configure that did not pass -DCMAKE_CUDA_ARCHITECTURES silently
+# built the CUDA letterbox preprocessing kernel for sm_52. It still JITs on a
+# modern GPU, but returns WRONG pixel data — which silently corrupts the
+# results of every task. Deciding here, before project(), is what actually
+# takes effect.
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90")     # Turing -> Hopper
+endif()
+
 project(yolos_trt_tests VERSION 3.0.0 LANGUAGES CXX CUDA)
 
 # ============================================================================
@@ -23,6 +38,7 @@ add_compile_definitions("BASE_PATH_CLASSIFICATION=${CMAKE_SOURCE_DIR}/classifica
 add_compile_definitions("BASE_PATH_SEGMENTATION=${CMAKE_SOURCE_DIR}/segmentation/")
 add_compile_definitions("BASE_PATH_POSE=${CMAKE_SOURCE_DIR}/pose/")
 add_compile_definitions("BASE_PATH_OBB=${CMAKE_SOURCE_DIR}/obb/")
+add_compile_definitions("BASE_PATH_DEPTH=${CMAKE_SOURCE_DIR}/depth/")
 
 message(STATUS "Test Base Path: ${CMAKE_SOURCE_DIR}")
 
@@ -32,9 +48,15 @@ message(STATUS "Test Base Path: ${CMAKE_SOURCE_DIR}")
 find_package(CUDAToolkit REQUIRED)
 message(STATUS "CUDA Toolkit: ${CUDAToolkit_VERSION}")
 
-if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90")
+# TensorRT 10 requires Turing (sm_75) or newer, so the nvcc default of sm_52
+# is never a legitimate target here — catch a regression of the above.
+if(CMAKE_CUDA_ARCHITECTURES STREQUAL "52")
+    message(FATAL_ERROR
+        "CMAKE_CUDA_ARCHITECTURES is 52 (the nvcc default). The CUDA "
+        "preprocessing kernel returns incorrect data when built for sm_52 and "
+        "run on a modern GPU. Pass -DCMAKE_CUDA_ARCHITECTURES=<arch> explicitly.")
 endif()
+message(STATUS "CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 
 # ============================================================================
 # TensorRT
@@ -120,7 +142,7 @@ set_target_properties(cuda_preprocessing_test PROPERTIES
 # ============================================================================
 # Test Task Selection
 # ============================================================================
-option(testTask "Specify test task: 0=detection, 1=classification, 2=segmentation, 3=pose, 4=obb, 5=all" STRING)
+option(testTask "Specify test task: 0=detection, 1=classification, 2=segmentation, 3=pose, 4=obb, 5=all, 6=depth" STRING)
 message(STATUS "Selected test task: ${testTask}")
 
 set(detection_path "${CMAKE_SOURCE_DIR}/detection")
@@ -128,6 +150,7 @@ set(classification_path "${CMAKE_SOURCE_DIR}/classification")
 set(segmentation_path "${CMAKE_SOURCE_DIR}/segmentation")
 set(pose_path "${CMAKE_SOURCE_DIR}/pose")
 set(obb_path "${CMAKE_SOURCE_DIR}/obb")
+set(depth_path "${CMAKE_SOURCE_DIR}/depth")
 
 set(INFERENCE_EXES)
 set(TEST_EXES)
@@ -195,6 +218,19 @@ if(testTask STREQUAL "4" OR testTask STREQUAL "5")
 
     list(APPEND INFERENCE_EXES inference_obb_cpp)
     list(APPEND TEST_EXES compare_obb_results)
+endif()
+
+# ============================================================================
+# Depth Estimation Tests
+# ============================================================================
+if(testTask STREQUAL "6" OR testTask STREQUAL "5")
+    add_executable(inference_depth_cpp
+        ${depth_path}/inference_depth_cpp.cpp)
+    add_executable(compare_depth_results
+        ${depth_path}/compare_results.cpp)
+
+    list(APPEND INFERENCE_EXES inference_depth_cpp)
+    list(APPEND TEST_EXES compare_depth_results)
 endif()
 
 # ============================================================================

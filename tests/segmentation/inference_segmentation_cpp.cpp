@@ -9,6 +9,7 @@
 #include <chrono>
 #include <filesystem>
 #include <algorithm>
+#include <map>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
 
@@ -32,7 +33,7 @@ struct SingleInferenceResult {
 struct Results {
     std::string weightsPath;
     std::string task;
-    std::unordered_map<std::string, std::vector<SingleInferenceResult>> inferenceResults;
+    std::map<std::string, std::vector<SingleInferenceResult>> inferenceResults;
     std::unordered_map<std::string, std::string> inferenceMasks;
 };
 
@@ -72,13 +73,15 @@ bool loadImages(const std::string& imagesPath, std::vector<std::string>& imageFi
             }
         }
     }
+    // Deterministic order so results_cpp.json is stable and diffable
+    std::sort(imageFiles.begin(), imageFiles.end());
     return !imageFiles.empty();
 }
 
 void runInference(const std::string& modelPath, const std::string& labelsPath, const std::string& masksPath,
                   const std::vector<std::string>& imageFiles, 
                   const std::unordered_map<std::string, std::string>& inferenceConfig,
-                  std::unordered_map<std::string, std::vector<SingleInferenceResult>>& inferenceResults,
+                  std::map<std::string, std::vector<SingleInferenceResult>>& inferenceResults,
                   std::unordered_map<std::string, std::string>& inferenceMasks) {
     
     std::cout << "Model: " << modelPath << std::endl;
@@ -140,7 +143,7 @@ void runInference(const std::string& modelPath, const std::string& labelsPath, c
     }
 }
 
-void toJson(const std::unordered_map<std::string, Results>& results, 
+void toJson(const std::map<std::string, Results>& results, 
             const std::string& basePath, json& outputJson) {
     for (const auto& [modelName, result] : results) {
         outputJson[modelName] = json();
@@ -192,7 +195,7 @@ int main(int argc, char* argv[]) {
     if (fs::exists(masksPath)) fs::remove_all(masksPath);
     fs::create_directories(masksPath);
 
-    std::unordered_map<std::string, Results> allResults;
+    std::map<std::string, Results> allResults;
 
     for (const auto& model : models) {
         std::string modelPath = weightsPath + model + ".trt";
