@@ -2,6 +2,21 @@
 # YOLO Unified Benchmark - TensorRT CMake Configuration
 # ============================================================================
 cmake_minimum_required(VERSION 3.18)
+# ============================================================================
+# CUDA Architectures — MUST be chosen BEFORE project()
+# ============================================================================
+# project(... LANGUAGES CUDA) initializes CMAKE_CUDA_ARCHITECTURES from the
+# compiler default (sm_52 on CUDA 12.x) whenever it is not already set. That
+# made the `if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)` block further down dead
+# code, so any configure that did not pass -DCMAKE_CUDA_ARCHITECTURES silently
+# built the CUDA letterbox preprocessing kernel for sm_52. It still JITs on a
+# modern GPU, but returns WRONG pixel data — which silently corrupts the
+# results of every task. Deciding here, before project(), is what actually
+# takes effect.
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90")     # Turing -> Hopper
+endif()
+
 project(yolo_unified_benchmark
     VERSION 3.0.0
     DESCRIPTION "Comprehensive benchmarking for YOLO TensorRT models"
@@ -62,9 +77,15 @@ endif()
 find_package(CUDAToolkit REQUIRED)
 message(STATUS "CUDA Toolkit: ${CUDAToolkit_VERSION}")
 
-if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90")
+# TensorRT 10 requires Turing (sm_75) or newer, so the nvcc default of sm_52
+# is never a legitimate target here — catch a regression of the above.
+if(CMAKE_CUDA_ARCHITECTURES STREQUAL "52")
+    message(FATAL_ERROR
+        "CMAKE_CUDA_ARCHITECTURES is 52 (the nvcc default). The CUDA "
+        "preprocessing kernel returns incorrect data when built for sm_52 and "
+        "run on a modern GPU. Pass -DCMAKE_CUDA_ARCHITECTURES=<arch> explicitly.")
 endif()
+message(STATUS "CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 
 # ============================================================================
 # TensorRT
