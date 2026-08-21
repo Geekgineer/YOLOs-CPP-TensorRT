@@ -32,6 +32,7 @@ WORKDIR /build
 COPY CMakeLists.txt ./
 COPY include/ include/
 COPY src/ src/
+COPY tools/ tools/
 
 # Build (Release, all executables)
 RUN mkdir -p build && cd build && \
@@ -61,6 +62,8 @@ COPY --from=builder /build/build/video_inference .
 COPY --from=builder /build/build/camera_inference .
 COPY --from=builder /build/build/class_image_inference .
 COPY --from=builder /build/build/batch_image_inference .
+COPY --from=builder /build/build/depth_image_inference .
+COPY --from=builder /build/build/onnx2trt .
 
 # Copy labels
 COPY models/*.names models/
