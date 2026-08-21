@@ -113,7 +113,21 @@ std::vector<cv::Point> samplePoints(int width, int height) {
     return points;
 }
 
-double medianOf(const cv::Mat& depth) {
+/// @brief min/max/mean/median over the FINITE depth values only.
+///
+/// The Python ground truth summarizes `depth[np.isfinite(depth)]`, so the C++
+/// side must filter identically. cv::minMaxLoc and cv::mean do not skip NaN /
+/// Inf, so a single bad pixel would turn the C++ mean into NaN while Python
+/// silently ignored it — a mismatch that looks like a depth error but isn't.
+struct DepthStats {
+    double minDepth{0.0};
+    double maxDepth{0.0};
+    double meanDepth{0.0};
+    double medianDepth{0.0};
+    size_t finiteCount{0};
+};
+
+DepthStats computeStats(const cv::Mat& depth) {
     std::vector<float> values;
     values.reserve(static_cast<size_t>(depth.total()));
     for (int r = 0; r < depth.rows; ++r) {
@@ -122,16 +136,32 @@ double medianOf(const cv::Mat& depth) {
             if (std::isfinite(row[c])) values.push_back(row[c]);
         }
     }
-    if (values.empty()) return 0.0;
+
+    DepthStats stats;
+    stats.finiteCount = values.size();
+    if (values.empty()) return stats;
+
+    double sum = 0.0;
+    stats.minDepth = values[0];
+    stats.maxDepth = values[0];
+    for (const float v : values) {
+        sum += v;
+        stats.minDepth = std::min(stats.minDepth, static_cast<double>(v));
+        stats.maxDepth = std::max(stats.maxDepth, static_cast<double>(v));
+    }
+    stats.meanDepth = sum / static_cast<double>(values.size());
 
     const size_t mid = values.size() / 2;
     std::nth_element(values.begin(), values.begin() + mid, values.end());
     const double hi = values[mid];
-    if (values.size() % 2 == 1) return hi;
-
-    // Even count — average the two central order statistics, as NumPy does.
-    std::nth_element(values.begin(), values.begin() + mid - 1, values.begin() + mid);
-    return 0.5 * (hi + values[mid - 1]);
+    if (values.size() % 2 == 1) {
+        stats.medianDepth = hi;
+    } else {
+        // Even count — average the two central order statistics, as NumPy does.
+        std::nth_element(values.begin(), values.begin() + mid - 1, values.begin() + mid);
+        stats.medianDepth = 0.5 * (hi + values[mid - 1]);
+    }
+    return stats;
 }
 
 void runInference(const std::string& modelPath,
@@ -161,25 +191,28 @@ void runInference(const std::string& modelPath,
             continue;
         }
 
-        double minVal = 0.0;
-        double maxVal = 0.0;
-        cv::minMaxLoc(depth, &minVal, &maxVal);
+        const DepthStats stats = computeStats(depth);
+        if (stats.finiteCount == 0) {
+            std::cerr << "Warning: depth map for " << imagePath
+                      << " has no finite values, skipping" << std::endl;
+            continue;
+        }
 
         DepthImageResult res;
         res.width       = image.cols;
         res.height      = image.rows;
-        res.minDepth    = minVal;
-        res.maxDepth    = maxVal;
-        res.meanDepth   = cv::mean(depth)[0];
-        res.medianDepth = medianOf(depth);
+        res.minDepth    = stats.minDepth;
+        res.maxDepth    = stats.maxDepth;
+        res.meanDepth   = stats.meanDepth;
+        res.medianDepth = stats.medianDepth;
 
         for (const auto& pt : samplePoints(image.cols, image.rows)) {
             res.samples.push_back({pt.x, pt.y, depth.at<float>(pt.y, pt.x)});
         }
 
         std::cout << "Depth time: " << duration.count() << " ms"
-                  << ", range: " << minVal << " m .. " << maxVal << " m"
-                  << ", mean: " << res.meanDepth << " m" << std::endl;
+                  << ", range: " << stats.minDepth << " m .. " << stats.maxDepth << " m"
+                  << ", mean: " << stats.meanDepth << " m" << std::endl;
 
         inferenceResults[imagePath] = std::move(res);
     }
