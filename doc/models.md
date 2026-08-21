@@ -45,6 +45,21 @@ Supported models, ONNX export, TensorRT conversion, and optimization for YOLOs-T
 | YOLOv11n-cls | 1.6M | 70.0% |
 | YOLO26n-cls | 1.5M | 71.2% |
 
+### Metric Depth
+
+Monocular depth models predicting per-pixel distance in meters. Trained on a
+~2.19M image indoor/outdoor mix; delta-1 accuracy is on NYU Depth V2.
+
+| Model | Params | delta-1 Acc |
+|-------|-------:|------------:|
+| YOLO26n-depth | 2.4M | 0.882 |
+| YOLO26s-depth | - | - |
+| YOLO26m-depth | - | - |
+| YOLO26l-depth | - | - |
+| YOLO26x-depth | - | 0.933 |
+
+Export these at `imgsz=768` (their training resolution).
+
 ## Model Pipeline: PyTorch -> ONNX -> TensorRT
 
 ```
@@ -137,6 +152,7 @@ python trt-files/scripts/convert_to_tensorrt.py --convert-all --models-dir model
 | `coco.names` | 80 | General detection/segmentation/pose |
 | `Dota.names` | 15 | Aerial/satellite OBB |
 | `ImageNet.names` | 1000 | Classification |
+| _(none)_ | - | Depth — predicts meters, not classes |
 
 ## Model Paths in C++
 
@@ -152,6 +168,9 @@ YOLOPoseDetector pose("models/yolo11n-pose.trt", "");
 
 // OBB
 YOLOOBBDetector obb("models/yolo11n-obb.trt", "models/Dota.names");
+
+// Metric depth (no labels file)
+YOLODepthEstimator depth("models/yolo26n-depth.trt");
 
 // Classification
 YOLOClassifier cls("models/yolo11n-cls.trt", "models/ImageNet.names");

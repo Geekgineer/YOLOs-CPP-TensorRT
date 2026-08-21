@@ -122,6 +122,7 @@ YOLOs-TRT auto-detects the YOLO version from output tensor shapes — **no manua
 | **Pose Estimation** | `YOLOPoseDetector::detect()` | YOLOv8-pose · v11-pose · v26-pose |
 | **Oriented BBox (OBB)** | `YOLOOBBDetector::detect()` | YOLOv8-obb · v11-obb · v26-obb |
 | **Classification** | `YOLOClassifier::classify()` | YOLOv8-cls · v11-cls · v12-cls · v26-cls |
+| **Metric Depth** | `YOLODepthEstimator::estimate()` | YOLO26-depth |
 
 </div>
 
@@ -246,6 +247,7 @@ YOLOs-TRT is header-only. Include the task header you need, link against TensorR
 #include "yolos/tasks/pose.hpp"           // Pose Estimation
 #include "yolos/tasks/obb.hpp"            // Oriented Bounding Boxes
 #include "yolos/tasks/classification.hpp" // Classification
+#include "yolos/tasks/depth.hpp"          // Monocular metric depth
 #include "yolos/yolos.hpp"                // Everything
 ```
 
@@ -313,6 +315,25 @@ obb.drawDetections(image, results);
 yolos::cls::YOLOClassifier cls("yolov8n-cls.trt", "ImageNet.names");
 auto result = cls.classify(image);
 std::cout << result.className << ": " << result.confidence * 100 << "%" << std::endl;
+```
+
+</details>
+
+<details>
+<summary><b>Monocular Metric Depth</b></summary>
+
+```cpp
+// No labels file — depth models predict a value, not a class.
+yolos::depth::YOLODepthEstimator depth("yolo26n-depth.trt");
+
+// CV_32FC1 at the original image size; each value is METERS.
+cv::Mat depthMap = depth.estimate(image);
+
+float centreMeters = yolos::depth::YOLODepthEstimator::depthAt(
+    depthMap, depthMap.cols / 2, depthMap.rows / 2);
+
+cv::imshow("depth", yolos::depth::colorizeDepth(depthMap));
+cv::imshow("overlay", yolos::depth::overlayDepth(image, depthMap));
 ```
 
 </details>
@@ -405,7 +426,7 @@ Pinned Host ──cudaMemcpyAsync──► Device uint8 (raw BGR)
 YOLOs-CPP-TensorRT/
 ├── include/yolos/            # Header-only library
 │   ├── core/                 #   Engine, preprocessing, NMS, drawing, types
-│   └── tasks/                #   Detection, segmentation, pose, OBB, classification
+│   └── tasks/                #   Detection, segmentation, pose, OBB, classification, depth
 ├── src/                      # Ready-to-use inference binaries
 │   ├── image_inference.cpp   #   Single image / folder
 │   ├── video_inference.cpp   #   Video file (multi-threaded)
@@ -444,6 +465,9 @@ The build produces five ready-to-use executables:
 
 # Image classification
 ./class_image_inference models/yolov8n-cls.trt data/dog.jpg models/ImageNet.names
+
+# Monocular metric depth (third arg writes a colorized PNG instead of showing it)
+./depth_image_inference models/yolo26n-depth.trt data/dog.jpg depth.png
 ```
 
 ---
@@ -458,6 +482,7 @@ cd tests
 ./test_pose.sh         # Pose estimation only
 ./test_obb.sh          # Oriented bounding box only
 ./test_classification.sh # Classification only
+./test_depth.sh        # Metric depth estimation only
 ```
 
 Tests export models via Ultralytics, convert to TRT engines, run inference in both Python and C++, and compare outputs for correctness.

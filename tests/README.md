@@ -11,7 +11,8 @@ Comprehensive test suite validating C++ TensorRT implementations against Python 
 | Pose | 7/7 | YOLOv8, v11, YOLO26 | Pass |
 | Segmentation | 8/8 | YOLOv8, v11, YOLO26 | Pass |
 | OBB | 7/7 | YOLOv8, v11, YOLO26 | Pass |
-| **Total** | **36/36** | | **100%** |
+| Depth | 8/8 | YOLO26-depth | New |
+| **Total** | **44/44** | | |
 
 ## Requirements
 
@@ -34,6 +35,7 @@ Comprehensive test suite validating C++ TensorRT implementations against Python 
 ./test_pose.sh
 ./test_segmentation.sh
 ./test_obb.sh
+./test_depth.sh
 ```
 
 ## How Tests Work
@@ -57,6 +59,7 @@ tests/
 ├── test_segmentation.sh    # Segmentation task runner
 ├── test_pose.sh            # Pose estimation task runner
 ├── test_obb.sh             # OBB detection task runner
+├── test_depth.sh           # Metric depth estimation task runner
 ├── build_test.sh           # CMake build script (TensorRT + CUDA)
 ├── CMakeLists.txt          # Test suite CMake config
 │
@@ -71,7 +74,8 @@ tests/
 ├── classification/         # Similar structure
 ├── segmentation/           # Similar structure
 ├── pose/                   # Similar structure
-└── obb/                    # Similar structure
+├── obb/                    # Similar structure
+└── depth/                  # Similar structure
 ```
 
 ## Tolerance Settings
@@ -87,6 +91,8 @@ additional numerical differences compared to PyTorch FP32):
 | Mask Pixels | 20% | Segmentation mask difference |
 | OBB Center | +/-50px | Oriented box center tolerance |
 | OBB Angle | +/-0.2 rad | Rotation angle tolerance |
+| Depth | 10% rel or +/-0.15 m | Metric depth, whichever is looser |
+| Depth samples | 20% outliers | Pixels on a depth edge may fall either side |
 
 ## CI/CD Integration
 

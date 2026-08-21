@@ -26,6 +26,7 @@ detector.drawDetections(frame, detections);
 | `yolos::pose::` | Pose estimation |
 | `yolos::obb::` | Oriented bounding boxes |
 | `yolos::cls::` | Image classification |
+| `yolos::depth::` | Monocular metric depth estimation |
 
 ## Object Detection
 
@@ -191,3 +192,29 @@ auto cls = yolos::cls::createClassifier("yolov8n-cls.trt", "ImageNet.names");
 
 - [Model Guide](models.md) -- Export and optimize models
 - [Development](development.md) -- Extend the library
+
+## Monocular Metric Depth
+
+```cpp
+#include "yolos/tasks/depth.hpp"
+
+// Depth models predict a value per pixel, so there is no labels file.
+yolos::depth::YOLODepthEstimator estimator("models/yolo26n-depth.trt");
+
+// CV_32FC1 at the ORIGINAL image size. Every value is a distance in METERS —
+// the exported graph already applies the log-affine metric calibration, so no
+// scaling or normalization is needed on your side.
+cv::Mat depthMap = estimator.estimate(image);
+
+// Distance to whatever is at a given pixel.
+float meters = yolos::depth::YOLODepthEstimator::depthAt(depthMap, 320, 240);
+
+// Visualization helpers. Passing min/max clamps the colour range, which keeps
+// the colours stable across frames of a video (auto-ranging makes them flicker).
+cv::Mat colored = yolos::depth::colorizeDepth(depthMap, 0.5f, 20.0f);
+cv::Mat blended = yolos::depth::overlayDepth(image, depthMap, 0.6f);
+```
+
+Supported weights: `yolo26{n,s,m,l,x}-depth`. Export at `imgsz=768` — that is the
+resolution the released weights were trained at, and the engine geometry must
+match it for the depth scale to be correct.
