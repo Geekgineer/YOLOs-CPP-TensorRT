@@ -51,7 +51,7 @@ using namespace yolos;
 // ============================================================================
 // Version Info
 // ============================================================================
-constexpr const char* BENCHMARK_VERSION = "2.0.0";
+constexpr const char* BENCHMARK_VERSION = "3.1.0";
 
 // ============================================================================
 // ANSI Color Codes for Terminal Output

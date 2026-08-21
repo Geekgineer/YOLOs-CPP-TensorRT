@@ -25,6 +25,8 @@ cd benchmarks
 Update version in:
 - `benchmarks/yolo_unified_benchmark.cpp` (line ~54: `BENCHMARK_VERSION`)
 - `README.md` (badges and documentation)
+- `CHANGELOG.md` (add the release section)
+- `pyproject.toml`, `CMakeLists.txt`, `tests/CMakeLists.txt`, `benchmarks/CMakeLists.txt`
 
 ### 4. Prepare Model Assets
 
@@ -39,8 +41,8 @@ This creates zip files in `release_assets/`.
 ### Step 1: Create Model Assets Release
 
 1. Go to GitHub -> Releases -> "Create new release"
-2. **Tag:** `v2.0.0-models`
-3. **Title:** "Model Assets v2.0.0"
+2. **Tag:** `v3.1.0-models`
+3. **Title:** "Model Assets v3.1.0"
 4. **Description:**
    ```
    Pre-trained YOLO models for YOLOs-TRT tests.
@@ -54,7 +56,7 @@ This creates zip files in `release_assets/`.
    
    Note: TensorRT engines are GPU-specific. Download ONNX models
    and convert on your target hardware using trtexec or the
-   included convert_to_tensorrt.py script.
+   included onnx2trt tool or convert_to_tensorrt.py script.
    ```
 5. Upload all `.zip` files from `release_assets/`
 6. Publish release
@@ -62,59 +64,57 @@ This creates zip files in `release_assets/`.
 ### Step 2: Create Main Release
 
 1. Go to GitHub -> Releases -> "Create new release"
-2. **Tag:** `v2.0.0`
-3. **Title:** "YOLOs-TRT v2.0.0"
+2. **Tag:** `v3.1.0`
+3. **Title:** "YOLOs-TRT v3.1.0"
 4. Use the release notes template below
 5. Publish release
 
 ## Release Notes Template
 
+Fill in the placeholders — do not leave a previous release's content in place.
+
 ```markdown
-## What's New in v2.0.0
+## What's New in vX.Y.Z
 
-### TensorRT Backend (Breaking Change)
+### Highlights
 
-This release replaces the ONNX Runtime backend with NVIDIA TensorRT for
-maximum inference performance on NVIDIA GPUs. Key changes:
+- <one line per user-visible change; link the PR>
 
-- **Zero CPU preprocessing**: Single CUDA kernel for letterbox + BGR-to-RGB + normalize
-- **CUDA graph capture**: Eliminates per-frame kernel launch overhead
-- **Pinned staging buffers**: Truly async host-to-device transfers
-- **GPU-only execution**: TensorRT is always GPU
+See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
-### Performance (RTX 2000 Ada Laptop GPU, YOLOv11n 640x640)
+### Performance (<GPU>, <model> <resolution>)
 
 | Precision | FPS | P50 Latency | Peak GPU Memory |
 |:---------:|:---:|:-----------:|:---------------:|
-| FP32      | 466 | 2.040 ms    | 529.5 MB        |
-| FP16      | 479 | 1.976 ms    | 535.7 MB        |
-| INT8      | 530 | 1.775 ms    | 443.7 MB        |
+| FP32      |     |             |                 |
+| FP16      |     |             |                 |
+| INT8      |     |             |                 |
 
 ### Supported Models
-| Version | Detection | Segmentation | Pose | OBB | Classification |
-|---------|-----------|--------------|------|-----|----------------|
-| YOLOv5  | Y | - | - | - | - |
-| YOLOv6  | Y | - | - | - | - |
-| YOLOv8  | Y | Y | Y | Y | Y |
-| YOLOv9  | Y | - | - | - | - |
-| YOLOv10 | Y | - | - | - | - |
-| YOLOv11 | Y | Y | Y | Y | Y |
-| YOLOv12 | Y | - | - | - | - |
-| YOLO26  | Y | Y | Y | Y | Y |
+
+| Version | Detection | Segmentation | Pose | OBB | Classification | Depth |
+|---------|-----------|--------------|------|-----|----------------|-------|
+| YOLOv5  | Y | - | - | - | - | - |
+| YOLOv6  | Y | - | - | - | - | - |
+| YOLOv8  | Y | Y | Y | Y | Y | - |
+| YOLOv9  | Y | - | - | - | - | - |
+| YOLOv10 | Y | - | - | - | - | - |
+| YOLOv11 | Y | Y | Y | Y | Y | - |
+| YOLOv12 | Y | - | - | - | - | - |
+| YOLO26  | Y | Y | Y | Y | Y | Y |
 
 ### Requirements
+
 - NVIDIA GPU (Compute Capability >= 7.5)
 - CUDA Toolkit >= 12.0
-- TensorRT >= 10.0
+- TensorRT 10.x (not 11.x)
 - OpenCV >= 4.5
 - CMake >= 3.18
 - C++17 compiler
 
 ### Breaking Changes
-- ONNX Runtime backend removed; TensorRT is now the sole backend
-- Constructor no longer accepts `isGPU` parameter (always GPU)
-- Model files must be `.trt` (serialized TensorRT engines), not `.onnx`
-- `build.sh` no longer downloads ONNX Runtime; uses system TensorRT
+
+- <list, or "None">
 ```
 
 ## Post-Release

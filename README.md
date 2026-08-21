@@ -487,6 +487,12 @@ The build produces five ready-to-use executables:
 
 ---
 
+## 📋 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+---
+
 ## 🧪 Testing
 
 ```bash

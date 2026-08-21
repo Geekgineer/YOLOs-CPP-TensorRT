@@ -18,7 +18,7 @@ if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
 endif()
 
 project(yolo_unified_benchmark
-    VERSION 3.0.0
+    VERSION 3.1.0
     DESCRIPTION "Comprehensive benchmarking for YOLO TensorRT models"
     LANGUAGES CXX CUDA
 )

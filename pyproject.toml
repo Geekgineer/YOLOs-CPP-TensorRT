@@ -1,6 +1,6 @@
 [project]
 name = "yolos-trt-tools"
-version = "1.0.0"
+version = "3.1.0"
 description = "Python tools for YOLOs-TRT model export and TensorRT conversion"
 requires-python = ">=3.8"
 

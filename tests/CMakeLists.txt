@@ -17,7 +17,7 @@ if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90")     # Turing -> Hopper
 endif()
 
-project(yolos_trt_tests VERSION 3.0.0 LANGUAGES CXX CUDA)
+project(yolos_trt_tests VERSION 3.1.0 LANGUAGES CXX CUDA)
 
 # ============================================================================
 # C++ Standard
