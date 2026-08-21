@@ -9,7 +9,7 @@
 #
 # TEST_TASK:
 #   0 = Detection, 1 = Classification, 2 = Segmentation,
-#   3 = Pose, 4 = OBB, 5 = All (default)
+#   3 = Pose, 4 = OBB, 5 = All (default), 6 = Depth
 # ============================================================================
 set -euo pipefail
 
@@ -38,6 +38,7 @@ usage() {
     echo "                3 = Pose"
     echo "                4 = OBB"
     echo "                5 = All tasks (default)"
+    echo "                6 = Depth estimation"
     echo ""
     echo "Prerequisites:"
     echo "  - CUDA Toolkit >= 12.0"

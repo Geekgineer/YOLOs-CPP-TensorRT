@@ -23,6 +23,7 @@ add_compile_definitions("BASE_PATH_CLASSIFICATION=${CMAKE_SOURCE_DIR}/classifica
 add_compile_definitions("BASE_PATH_SEGMENTATION=${CMAKE_SOURCE_DIR}/segmentation/")
 add_compile_definitions("BASE_PATH_POSE=${CMAKE_SOURCE_DIR}/pose/")
 add_compile_definitions("BASE_PATH_OBB=${CMAKE_SOURCE_DIR}/obb/")
+add_compile_definitions("BASE_PATH_DEPTH=${CMAKE_SOURCE_DIR}/depth/")
 
 message(STATUS "Test Base Path: ${CMAKE_SOURCE_DIR}")
 
@@ -120,7 +121,7 @@ set_target_properties(cuda_preprocessing_test PROPERTIES
 # ============================================================================
 # Test Task Selection
 # ============================================================================
-option(testTask "Specify test task: 0=detection, 1=classification, 2=segmentation, 3=pose, 4=obb, 5=all" STRING)
+option(testTask "Specify test task: 0=detection, 1=classification, 2=segmentation, 3=pose, 4=obb, 5=all, 6=depth" STRING)
 message(STATUS "Selected test task: ${testTask}")
 
 set(detection_path "${CMAKE_SOURCE_DIR}/detection")
@@ -128,6 +129,7 @@ set(classification_path "${CMAKE_SOURCE_DIR}/classification")
 set(segmentation_path "${CMAKE_SOURCE_DIR}/segmentation")
 set(pose_path "${CMAKE_SOURCE_DIR}/pose")
 set(obb_path "${CMAKE_SOURCE_DIR}/obb")
+set(depth_path "${CMAKE_SOURCE_DIR}/depth")
 
 set(INFERENCE_EXES)
 set(TEST_EXES)
@@ -195,6 +197,19 @@ if(testTask STREQUAL "4" OR testTask STREQUAL "5")
 
     list(APPEND INFERENCE_EXES inference_obb_cpp)
     list(APPEND TEST_EXES compare_obb_results)
+endif()
+
+# ============================================================================
+# Depth Estimation Tests
+# ============================================================================
+if(testTask STREQUAL "6" OR testTask STREQUAL "5")
+    add_executable(inference_depth_cpp
+        ${depth_path}/inference_depth_cpp.cpp)
+    add_executable(compare_depth_results
+        ${depth_path}/compare_results.cpp)
+
+    list(APPEND INFERENCE_EXES inference_depth_cpp)
+    list(APPEND TEST_EXES compare_depth_results)
 endif()
 
 # ============================================================================

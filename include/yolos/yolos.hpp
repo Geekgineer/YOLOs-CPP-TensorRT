@@ -13,6 +13,7 @@
 //   #include "yolos/tasks/pose.hpp"
 //   #include "yolos/tasks/obb.hpp"
 //   #include "yolos/tasks/classification.hpp"
+//   #include "yolos/tasks/depth.hpp"
 //
 // Author: YOLOs-TRT Team
 // ============================================================================
@@ -33,6 +34,7 @@
 #include "yolos/tasks/pose.hpp"
 #include "yolos/tasks/obb.hpp"
 #include "yolos/tasks/classification.hpp"
+#include "yolos/tasks/depth.hpp"
 
 // ============================================================================
 // Namespace Aliases for Convenience
@@ -60,5 +62,8 @@ using YOLOOBBDetector = obb::YOLOOBBDetector;
 using ClassificationResult = cls::ClassificationResult;
 using YOLOClassifier = cls::YOLOClassifier;
 using YOLO26Classifier = cls::YOLO26Classifier;
+
+// Depth estimation task aliases
+using YOLODepthEstimator = depth::YOLODepthEstimator;
 
 } // namespace yolos

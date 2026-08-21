@@ -7,6 +7,10 @@ on:
     branches: ["main", "dev"]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: read
@@ -23,10 +27,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache apt packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             /var/cache/apt/archives
@@ -87,6 +91,7 @@ jobs:
           file build/batch_image_inference
           file build/class_image_inference
           file build/camera_inference
+          file build/depth_image_inference
 
   # ==========================================================================
   # Build Benchmark Tool
@@ -96,10 +101,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache apt packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             /var/cache/apt/archives
@@ -160,7 +165,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install clang-format
         run: |
@@ -224,13 +229,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build Dockerfile.tensorrt (no push)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile.tensorrt
@@ -247,6 +252,7 @@ jobs:
   gpu-tests:
     runs-on: [self-hosted, Linux, X64, gpu]
     needs: [build-gpu]
+    timeout-minutes: 45
 
     strategy:
       fail-fast: false
@@ -257,10 +263,11 @@ jobs:
           - { name: "segmentation",   script: "test_segmentation.sh" }
           - { name: "pose",           script: "test_pose.sh" }
           - { name: "obb",            script: "test_obb.sh" }
+          - { name: "depth",          script: "test_depth.sh" }
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           clean: false  # preserve cached models/engines between runs
 
@@ -294,7 +301,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gpu-test-results-${{ matrix.task.name }}
           path: tests/${{ matrix.task.name }}/results/

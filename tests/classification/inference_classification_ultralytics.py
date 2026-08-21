@@ -26,7 +26,7 @@ def validate_paths(paths: dict) -> bool:
         print(f"Images path '{images_path}' does not exist.")
         return False
 
-    images_files = os.listdir(images_path)
+    images_files = sorted(os.listdir(images_path))
     if len(images_files) == 0:
         print(f"No images found in '{images_path}'.")
         return False
@@ -101,7 +101,7 @@ def run_inference(model_path: str, images_path: str) -> list:
 
     returned_results = []
 
-    for image_file in tqdm(os.listdir(images_path), desc="Images to process", unit="image"):
+    for image_file in tqdm(sorted(os.listdir(images_path)), desc="Images to process", unit="image"):
         _, file_ext = os.path.splitext(image_file)
         image_path = os.path.join(images_path, image_file)
         if not os.path.isfile(image_path) or file_ext.lower() not in [".jpg", ".jpeg", ".png"]:
@@ -164,7 +164,7 @@ def main():
 
     # Consider all .onnx files in models dir
     # Prefer classification ONNX models (commonly contain 'cls' or 'class' in name)
-    onnx_files = [f for f in os.listdir(weights_path) if f.endswith(".onnx")]
+    onnx_files = [f for f in sorted(os.listdir(weights_path)) if f.endswith(".onnx")]
     cls_files = [f for f in onnx_files if any(tag in f.lower() for tag in ["cls", "class"])]
     models = [os.path.splitext(f)[0] for f in (cls_files if len(cls_files) > 0 else onnx_files)]
 

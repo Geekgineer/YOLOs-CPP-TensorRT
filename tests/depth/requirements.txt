@@ -1,0 +1,5 @@
+ultralytics
+onnx
+opencv-python
+numpy
+tqdm

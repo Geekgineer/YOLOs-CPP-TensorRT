@@ -285,6 +285,12 @@ download_test_images() {
         "classification")
             curl -sL "https://ultralytics.com/images/bus.jpg" -o "bus.jpg" 2>/dev/null || true
             ;;
+        "depth")
+            # One outdoor street scene and one closer subject give the depth
+            # comparison both far-field and near-field pixels to check.
+            curl -sL "https://ultralytics.com/images/bus.jpg" -o "bus.jpg" 2>/dev/null || true
+            curl -sL "https://ultralytics.com/images/zidane.jpg" -o "zidane.jpg" 2>/dev/null || true
+            ;;
         *)
             curl -sL "https://ultralytics.com/images/bus.jpg" -o "test.jpg" 2>/dev/null || true
             ;;
