@@ -183,6 +183,25 @@ convert_onnx_to_trt() {
                 fi
             fi
 
+            # Fallback to Python converter. It does `import tensorrt`, which is
+            # NOT provided by the libnvinfer-dev / tensorrt-dev apt packages —
+            # only the Python wheel ships it. Install it on demand, pinned to the
+            # system TensorRT version: engines are version-locked, so a wheel of a
+            # different version produces engines the C++ runtime cannot
+            # deserialize.
+            if ! python3 -c "import tensorrt" &>/dev/null; then
+                local sys_trt
+                sys_trt=$(dpkg-query -W -f='${Version}' libnvinfer-dev 2>/dev/null \
+                          | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+                if [ -n "$sys_trt" ]; then
+                    echo -e "${YELLOW}Installing tensorrt==${sys_trt} for the Python converter...${NC}"
+                    pip install -q "tensorrt==${sys_trt}" 2>&1 | tail -3
+                else
+                    echo -e "${YELLOW}Installing tensorrt for the Python converter...${NC}"
+                    pip install -q tensorrt 2>&1 | tail -3
+                fi
+            fi
+
             # Fallback to Python converter
             local converter_script=""
             if [ -f "../../trt-files/scripts/convert_to_tensorrt.py" ]; then
@@ -205,7 +224,11 @@ convert_onnx_to_trt() {
                     failed=$((failed + 1))
                 fi
             else
-                echo -e "${RED}No converter found for $onnx_file${NC}"
+                echo -e "${RED}No way to build a TensorRT engine for $onnx_file.${NC}"
+                echo -e "${RED}  trtexec: not on PATH and not in /usr/src/tensorrt/bin${NC}"
+                echo -e "${RED}  (apt's libnvinfer-dev/tensorrt-dev do NOT ship trtexec;${NC}"
+                echo -e "${RED}   it comes with the samples package or the TensorRT tarball)${NC}"
+                echo -e "${RED}  python converter: trt-files/scripts/convert_to_tensorrt.py not found${NC}"
                 failed=$((failed + 1))
             fi
         fi

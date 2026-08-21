@@ -59,6 +59,17 @@ jobs:
           sudo apt-get update
 
           # Install ONLY minimal packages for compilation (no nsight/profiler bloat)
+          # TensorRT 10.x ONLY. This codebase targets the TRT 10 tensor API
+          # (enqueueV3 / setTensorAddress). Left unpinned, apt now resolves
+          # libnvinfer-dev to TensorRT 11.x built against CUDA 13, which both
+          # breaks that API and conflicts with the CUDA 12.x toolkit above.
+          sudo tee /etc/apt/preferences.d/tensorrt-pin > /dev/null <<'PIN'
+          Package: libnvinfer* libnvonnxparsers* tensorrt*
+          Pin: version 10.*
+          Pin-Priority: 1001
+          PIN
+          sudo apt-get update
+
           sudo apt-get install -y --no-install-recommends \
             cuda-nvcc-${CUDA_VERSION} \
             cuda-cudart-dev-${CUDA_VERSION} \
@@ -129,6 +140,17 @@ jobs:
           wget -q "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${UBUNTU_VER}/x86_64/cuda-keyring_1.1-1_all.deb"
           sudo dpkg -i cuda-keyring_1.1-1_all.deb
           rm cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+
+          # TensorRT 10.x ONLY. This codebase targets the TRT 10 tensor API
+          # (enqueueV3 / setTensorAddress). Left unpinned, apt now resolves
+          # libnvinfer-dev to TensorRT 11.x built against CUDA 13, which both
+          # breaks that API and conflicts with the CUDA 12.x toolkit above.
+          sudo tee /etc/apt/preferences.d/tensorrt-pin > /dev/null <<'PIN'
+          Package: libnvinfer* libnvonnxparsers* tensorrt*
+          Pin: version 10.*
+          Pin-Priority: 1001
+          PIN
           sudo apt-get update
 
           sudo apt-get install -y --no-install-recommends \
